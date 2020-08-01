@@ -8,9 +8,15 @@ Shader "Hidden/PostProcessing/MultiScaleVO"
         #include "../StdLib.hlsl"
         #include "Fog.hlsl"
 
-        TEXTURE2D_SAMPLER2D(_CameraDepthTexture, sampler_CameraDepthTexture);
+		TEXTURE2D_SAMPLER2D(_CameraDepthTexture, sampler_CameraDepthTexture);
+        TEXTURE2D_SAMPLER2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture);
         TEXTURE2D_SAMPLER2D(_MSVOcclusionTexture, sampler_MSVOcclusionTexture);
+		TEXTURE2D_SAMPLER2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2);
         float3 _AOColor;
+
+		TEXTURE2D_SAMPLER2D(_ScreenSpaceShadows, sampler_ScreenSpaceShadows);
+		float _CameraZoom;
+		float _Light_Angle;
 
     ENDHLSL
 
@@ -85,7 +91,22 @@ Shader "Hidden/PostProcessing/MultiScaleVO"
                     ao *= ComputeFog(d);
                 #endif
 
-                    return float4(ao * _AOColor, 0.0);
+					//ao = pow(1 * ao, 1 / 2.2);
+
+
+					float mask = 1 - SAMPLE_TEXTURE2D(_ScreenSpaceShadows, sampler_ScreenSpaceShadows, i.texcoordStereo).r;
+
+					float4 cdn = SAMPLE_TEXTURE2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2, i.texcoordStereo);
+					float3 normals = DecodeViewNormalStereo(cdn) * float3(1.0, 1.0, -1.0);
+
+                    //return float4(lerp(pow(ao, 2) * 0.5, ao * lerp(3, 4, _CameraZoom), mask) * _AOColor, 0.0);
+					//return float4(lerp(0, ao * lerp(3, 4, _CameraZoom), mask) * _AOColor, 0.0);
+
+					// Todo: Add a lerp to lerp between additional y and not, factored in by the height of the sun
+					// Todo: Add a lerp to lerp between shadow factoring in or not, factored in by sun strength (at night we use AO because there are no shadows)
+
+					return float4(lerp(0, ao * 1.0 * lerp(2 + (1 - _Light_Angle ) + _Light_Angle * 2 * normals.y, 2 + (1 - _Light_Angle) + _Light_Angle * 2 * normals.y, _CameraZoom), mask) * _AOColor, 0.0);
+					//return float4(ao * _AOColor, 0.0);
                 }
 
             ENDHLSL
@@ -101,6 +122,15 @@ Shader "Hidden/PostProcessing/MultiScaleVO"
 
                 float4 Frag(VaryingsDefault i) : SV_Target
                 {
+					
+					float4 cdn = SAMPLE_TEXTURE2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2, i.texcoordStereo);
+					float3 normals = DecodeViewNormalStereo(cdn) * float3(0.0, 1.0, 0.0);
+					//normals = normalize(normals);
+
+					//return float4(lerp(pow(ao, 2) * 0.5, ao * lerp(3, 4, _CameraZoom), mask) * _AOColor, 0.0);
+				   //return float4(lerp(0, lerp(ao, 1*pow(ao,1), _CameraZoom) * lerp(3, 4, _CameraZoom), mask) * _AOColor, 0.0);
+					return 1.00 * float4(normals.x, normals.y, normals.z, 1);
+
                     half ao = SAMPLE_TEXTURE2D(_MSVOcclusionTexture, sampler_MSVOcclusionTexture, i.texcoordStereo).r;
                     return float4(ao.rrr, 1.0);
                 }

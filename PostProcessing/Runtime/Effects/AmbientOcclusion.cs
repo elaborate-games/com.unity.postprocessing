@@ -1,4 +1,5 @@
 using System;
+using System.Net.NetworkInformation;
 
 namespace UnityEngine.Rendering.PostProcessing
 {
@@ -18,7 +19,8 @@ namespace UnityEngine.Rendering.PostProcessing
         /// A modern version of ambient occlusion heavily optimized for consoles and desktop
         /// platforms.
         /// </summary>
-        MultiScaleVolumetricObscurance
+        MultiScaleVolumetricObscurance,
+        MultiScaleVolumentricAndScalableAmbientObscurance,
     }
 
     /// <summary>
@@ -216,10 +218,14 @@ namespace UnityEngine.Rendering.PostProcessing
         {
             if (m_Methods == null)
             {
+                var s = new ScalableAO(settings);
+                var ms = new MultiScaleVO(settings);
+                
                 m_Methods = new IAmbientOcclusionMethod[]
                 {
-                    new ScalableAO(settings),
-                    new MultiScaleVO(settings),
+                    s,
+                    ms,
+                    new AOComposite(s, ms), 
                 };
             }
         }

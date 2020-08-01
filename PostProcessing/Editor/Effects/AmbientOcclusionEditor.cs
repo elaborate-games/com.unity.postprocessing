@@ -32,7 +32,7 @@ namespace UnityEditor.Rendering.PostProcessing
             PropertyField(m_Mode);
             int aoMode = m_Mode.value.intValue;
 
-            if (RuntimeUtilities.scriptableRenderPipelineActive && aoMode == (int)AmbientOcclusionMode.ScalableAmbientObscurance)
+            if (RuntimeUtilities.scriptableRenderPipelineActive && (aoMode == (int)AmbientOcclusionMode.ScalableAmbientObscurance|| aoMode == (int)AmbientOcclusionMode.MultiScaleVolumentricAndScalableAmbientObscurance))
             {
                 EditorGUILayout.HelpBox("Scalable ambient obscurance doesn't work with scriptable render pipelines.", MessageType.Warning);
                 return;
@@ -40,12 +40,12 @@ namespace UnityEditor.Rendering.PostProcessing
 
             PropertyField(m_Intensity);
 
-            if (aoMode == (int)AmbientOcclusionMode.ScalableAmbientObscurance)
+            if (aoMode == (int)AmbientOcclusionMode.ScalableAmbientObscurance || aoMode == (int)AmbientOcclusionMode.MultiScaleVolumentricAndScalableAmbientObscurance)
             {
                 PropertyField(m_Radius);
                 PropertyField(m_Quality);
             }
-            else if (aoMode == (int)AmbientOcclusionMode.MultiScaleVolumetricObscurance)
+            else if (aoMode == (int)AmbientOcclusionMode.MultiScaleVolumetricObscurance || aoMode == (int)AmbientOcclusionMode.MultiScaleVolumentricAndScalableAmbientObscurance)
             {
                 if (!SystemInfo.supportsComputeShaders)
                     EditorGUILayout.HelpBox("Multi-scale volumetric obscurance requires compute shader support.", MessageType.Warning);

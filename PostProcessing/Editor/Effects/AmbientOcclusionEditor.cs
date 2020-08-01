@@ -7,7 +7,7 @@ namespace UnityEditor.Rendering.PostProcessing
     internal sealed class AmbientOcclusionEditor : PostProcessEffectEditor<AmbientOcclusion>
     {
         SerializedParameterOverride m_Mode;
-        SerializedParameterOverride m_Intensity;
+        private SerializedParameterOverride m_Intensity, m_IntensityVolumetric;
         SerializedParameterOverride m_Color;
         SerializedParameterOverride m_AmbientOnly;
         SerializedParameterOverride m_ThicknessModifier;
@@ -19,6 +19,7 @@ namespace UnityEditor.Rendering.PostProcessing
         {
             m_Mode = FindParameterOverride(x => x.mode);
             m_Intensity = FindParameterOverride(x => x.intensity);
+            m_IntensityVolumetric = FindParameterOverride(x => x.intensityVolumetric);
             m_Color = FindParameterOverride(x => x.color);
             m_AmbientOnly = FindParameterOverride(x => x.ambientOnly);
             m_ThicknessModifier = FindParameterOverride(x => x.thicknessModifier);
@@ -32,20 +33,30 @@ namespace UnityEditor.Rendering.PostProcessing
             PropertyField(m_Mode);
             int aoMode = m_Mode.value.intValue;
 
-            if (RuntimeUtilities.scriptableRenderPipelineActive && (aoMode == (int)AmbientOcclusionMode.ScalableAmbientObscurance|| aoMode == (int)AmbientOcclusionMode.MultiScaleVolumentricAndScalableAmbientObscurance))
+            if (RuntimeUtilities.scriptableRenderPipelineActive && (aoMode == (int) AmbientOcclusionMode.ScalableAmbientObscurance ||
+                                                                    aoMode == (int) AmbientOcclusionMode.MultiScaleVolumentricAndScalableAmbientObscurance))
             {
                 EditorGUILayout.HelpBox("Scalable ambient obscurance doesn't work with scriptable render pipelines.", MessageType.Warning);
                 return;
             }
 
-            PropertyField(m_Intensity);
+            var isScaleableOn = aoMode == (int) AmbientOcclusionMode.ScalableAmbientObscurance ||
+                                aoMode == (int) AmbientOcclusionMode.MultiScaleVolumentricAndScalableAmbientObscurance;
+            var isVolumetricOn = aoMode == (int) AmbientOcclusionMode.MultiScaleVolumetricObscurance ||
+                                 aoMode == (int) AmbientOcclusionMode.MultiScaleVolumentricAndScalableAmbientObscurance;
 
-            if (aoMode == (int)AmbientOcclusionMode.ScalableAmbientObscurance || aoMode == (int)AmbientOcclusionMode.MultiScaleVolumentricAndScalableAmbientObscurance)
+            if (isScaleableOn)
+                PropertyField(m_Intensity);
+            if (isVolumetricOn)
+                PropertyField(m_IntensityVolumetric);
+
+            if (isScaleableOn)
             {
                 PropertyField(m_Radius);
                 PropertyField(m_Quality);
             }
-            else if (aoMode == (int)AmbientOcclusionMode.MultiScaleVolumetricObscurance || aoMode == (int)AmbientOcclusionMode.MultiScaleVolumentricAndScalableAmbientObscurance)
+
+            if (isVolumetricOn)
             {
                 if (!SystemInfo.supportsComputeShaders)
                     EditorGUILayout.HelpBox("Multi-scale volumetric obscurance requires compute shader support.", MessageType.Warning);

@@ -86,6 +86,12 @@ namespace UnityEngine.Rendering.PostProcessing
         /// </summary>
         [Range(0f, 4f), Tooltip("The degree of darkness added by ambient occlusion. Higher values produce darker areas.")]
         public FloatParameter intensity = new FloatParameter { value = 0f };
+        
+        /// <summary>
+        /// The degree of darkness added by ambient occlusion.
+        /// </summary>
+        [Range(0f, 4f), Tooltip("The degree of darkness added by ambient occlusion. Higher values produce darker areas.")]
+        public FloatParameter intensityVolumetric = new FloatParameter { value = 0f };
 
         /// <summary>
         /// A custom color to use for the ambient occlusion.
@@ -165,7 +171,7 @@ namespace UnityEngine.Rendering.PostProcessing
         public override bool IsEnabledAndSupported(PostProcessRenderContext context)
         {
             bool state = enabled.value
-                && intensity.value > 0f;
+                && (intensity.value > 0f || intensityVolumetric.value > 0);
 
             if (mode.value == AmbientOcclusionMode.ScalableAmbientObscurance)
             {

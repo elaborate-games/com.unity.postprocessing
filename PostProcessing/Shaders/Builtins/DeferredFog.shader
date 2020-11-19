@@ -20,7 +20,7 @@ Shader "Hidden/PostProcessing/DeferredFog"
             float dist = ComputeFogDistance(depth);
             half fog = 1.0 - ComputeFog(dist);
 
-            return lerp(color, _FogColor, fog);
+            return lerp(color, _FogColor, fog * _FogColor.a);
         }
 
         float4 FragExcludeSkybox(VaryingsDefault i) : SV_Target
@@ -33,7 +33,7 @@ Shader "Hidden/PostProcessing/DeferredFog"
             float dist = ComputeFogDistance(depth);
             half fog = 1.0 - ComputeFog(dist);
 
-            return lerp(color, _FogColor, fog * skybox);
+            return lerp(color, _FogColor, fog * skybox * _FogColor.a);
         }
 
     ENDHLSL

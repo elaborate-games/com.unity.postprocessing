@@ -269,7 +269,6 @@ float4 FragBlur(VaryingsDefault i) : SV_Target
     float2 delta = float2(0.0, _MainTex_TexelSize.y / DOWNSAMPLE * 2.0);
 #endif
 
-    /*
 #if defined(BLUR_HIGH_QUALITY)
 
     // High quality 7-tap Gaussian with adaptive sampling
@@ -308,8 +307,8 @@ float4 FragBlur(VaryingsDefault i) : SV_Target
     s /= w0 + w1a + w1b + w2a + w2b + w3a + w3b;
 
 #else
-*/
-    // Faster 5-tap Gaussian with linear sampling
+
+    // Fater 5-tap Gaussian with linear sampling
     half4 p0  = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.texcoordStereo);
     half4 p1a = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, UnityStereoTransformScreenSpaceTex(i.texcoord - delta * 1.3846153846));
     half4 p1b = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, UnityStereoTransformScreenSpaceTex(i.texcoord + delta * 1.3846153846));
@@ -337,7 +336,7 @@ float4 FragBlur(VaryingsDefault i) : SV_Target
 
     s /= w0 + w1a + w1b + w2a + w2b;
 
-//#endif
+#endif
 
     return PackAONormal(s, n0);
 }
@@ -348,9 +347,7 @@ half EncodeAO(half x)
     #if UNITY_COLORSPACE_GAMMA
         return 1.0 - max(LinearToSRGB(1.0 - saturate(x)), 0.0);
     #else
-    // This somehow looks better and makes the textures not look weird blurry
-        //return x;
-        return 1.0 - max(LinearToSRGB(1.0 - saturate(x)), 0.0);
+        return x;
     #endif
 }
 

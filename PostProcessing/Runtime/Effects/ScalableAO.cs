@@ -38,7 +38,9 @@ namespace UnityEngine.Rendering.PostProcessing
 
         public DepthTextureMode GetCameraFlags()
         {
-            return DepthTextureMode.Depth | DepthTextureMode.DepthNormals;
+            // Normals are reconstructed from depth in ScalableAO.hlsl; the depth-normals
+            // replacement pass never contained the instanced buildings/units/trees anyway.
+            return DepthTextureMode.Depth;
         }
 
         void DoLazyInitialization(PostProcessRenderContext context)

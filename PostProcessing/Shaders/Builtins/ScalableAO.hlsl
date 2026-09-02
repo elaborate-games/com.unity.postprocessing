@@ -48,9 +48,9 @@ static const float kBeta = 0.002;
 TEXTURE2D_SAMPLER2D(_MainTex, sampler_MainTex);
 TEXTURE2D_SAMPLER2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2);
 TEXTURE2D_SAMPLER2D(_CameraDepthTexture, sampler_CameraDepthTexture);
-TEXTURE2D_SAMPLER2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture);
 
 float4 _MainTex_TexelSize;
+float4 _CameraDepthTexture_TexelSize;
 
 float4 _AOParams;
 float3 _AOColor;
@@ -108,26 +108,10 @@ float SampleDepth(float2 uv)
     return d * _ProjectionParams.z + CheckBounds(uv, d);
 }
 
-float3 SampleNormal(float2 uv)
+// Linear eye depth without the out-of-bounds penalty (used for normal reconstruction)
+float SampleEyeDepthRaw(float2 uv)
 {
-#if defined(SOURCE_GBUFFER)
-    float3 norm = SAMPLE_TEXTURE2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2, uv).xyz;
-    norm = norm * 2 - any(norm); // gets (0,0,0) when norm == 0
-    norm = mul((float3x3)unity_WorldToCamera, norm);
-#if defined(VALIDATE_NORMALS)
-    norm = normalize(norm);
-#endif
-    return norm;
-#else
-    float4 cdn = SAMPLE_TEXTURE2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture, uv);
-    return DecodeViewNormalStereo(cdn) * float3(1.0, 1.0, -1.0);
-#endif
-}
-
-float SampleDepthNormal(float2 uv, out float3 normal)
-{
-    normal = SampleNormal(UnityStereoTransformScreenSpaceTex(uv));
-    return SampleDepth(uv);
+    return Linear01Depth(SAMPLE_DEPTH_TEXTURE_LOD(_CameraDepthTexture, sampler_CameraDepthTexture, uv, 0)) * _ProjectionParams.z;
 }
 
 // Normal vector comparer (for geometry-aware weighting)
@@ -164,6 +148,78 @@ float CheckPerspective(float x)
 float3 ReconstructViewPos(float2 uv, float depth, float2 p11_22, float2 p13_31)
 {
     return float3((uv * 2.0 - 1.0 - p13_31) / p11_22 * CheckPerspective(depth), depth);
+}
+
+// Geometric normal reconstructed from the depth buffer, in the same space as
+// ReconstructViewPos (camera at the origin, +z into the scene).
+//
+// Civitates: the depth-normals texture does not contain the instanced buildings,
+// units or trees (their shaders use RenderType "Cutout", which the built-in
+// replacement shader has no subshader for, and it lacks procedural instancing
+// anyway). Sampling it gave those pixels the terrain's normal, so every wall
+// self-occluded into a flat haze. The depth buffer covers every opaque pixel.
+//
+// Per axis, the neighbour whose depth is closer to the centre forms the tangent,
+// so normals stay clean across silhouettes instead of blending foreground and
+// background (same scheme as SSGI pass 0).
+float3 ReconstructViewNormal(float2 uv)
+{
+    float2 p11_22 = float2(unity_CameraProjection._11, unity_CameraProjection._22);
+    float2 p13_31 = float2(unity_CameraProjection._13, unity_CameraProjection._23);
+
+    float2 dx = float2(_CameraDepthTexture_TexelSize.x, 0.0);
+    float2 dy = float2(0.0, _CameraDepthTexture_TexelSize.y);
+
+    float dC = SampleEyeDepthRaw(uv);
+    float dR = SampleEyeDepthRaw(uv + dx);
+    float dL = SampleEyeDepthRaw(uv - dx);
+    float dU = SampleEyeDepthRaw(uv + dy);
+    float dD = SampleEyeDepthRaw(uv - dy);
+
+    float3 pC = ReconstructViewPos(uv, dC, p11_22, p13_31);
+
+    float3 tx = abs(dR - dC) < abs(dL - dC)
+        ? ReconstructViewPos(uv + dx, dR, p11_22, p13_31) - pC
+        : pC - ReconstructViewPos(uv - dx, dL, p11_22, p13_31);
+
+    float3 ty = abs(dU - dC) < abs(dD - dC)
+        ? ReconstructViewPos(uv + dy, dU, p11_22, p13_31) - pC
+        : pC - ReconstructViewPos(uv - dy, dD, p11_22, p13_31);
+
+    float3 c = cross(ty, tx);
+    float len = length(c);
+    float3 n = len > 1e-12 ? c / len : float3(0.0, 0.0, -1.0);
+
+    // A visible surface must face the camera, which sits at the origin: flip
+    // whatever winding the cross product produced toward -pC.
+    if (dot(n, pC) > 0.0)
+        n = -n;
+
+    return n;
+}
+
+float3 SampleNormal(float2 uv)
+{
+#if defined(SOURCE_GBUFFER)
+    float3 norm = SAMPLE_TEXTURE2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2, uv).xyz;
+    norm = norm * 2 - any(norm); // gets (0,0,0) when norm == 0
+    norm = mul((float3x3)unity_WorldToCamera, norm);
+#if defined(VALIDATE_NORMALS)
+    norm = normalize(norm);
+#endif
+    return norm;
+#else
+    // Depth-derived geometric normal instead of _CameraDepthNormalsTexture
+    // (see ReconstructViewNormal). Same convention as the old
+    // DecodeViewNormalStereo(cdn) * float3(1, 1, -1) result.
+    return ReconstructViewNormal(uv);
+#endif
+}
+
+float SampleDepthNormal(float2 uv, out float3 normal)
+{
+    normal = SampleNormal(UnityStereoTransformScreenSpaceTex(uv));
+    return SampleDepth(uv);
 }
 
 // Sample point picker

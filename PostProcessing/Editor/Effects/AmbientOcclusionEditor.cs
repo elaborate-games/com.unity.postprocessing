@@ -13,6 +13,8 @@ namespace UnityEditor.Rendering.PostProcessing
         SerializedParameterOverride m_ThicknessModifier;
         SerializedParameterOverride m_DirectLightingStrength;
         SerializedParameterOverride m_Quality;
+        SerializedParameterOverride m_SampleCount;
+        SerializedParameterOverride m_Resolution;
         SerializedParameterOverride m_Radius;
 
         public override void OnEnable()
@@ -25,6 +27,8 @@ namespace UnityEditor.Rendering.PostProcessing
             m_ThicknessModifier = FindParameterOverride(x => x.thicknessModifier);
             m_DirectLightingStrength = FindParameterOverride(x => x.directLightingStrength);
             m_Quality = FindParameterOverride(x => x.quality);
+            m_SampleCount = FindParameterOverride(x => x.sampleCount);
+            m_Resolution = FindParameterOverride(x => x.resolution);
             m_Radius = FindParameterOverride(x => x.radius);
         }
 
@@ -54,6 +58,8 @@ namespace UnityEditor.Rendering.PostProcessing
             {
                 PropertyField(m_Radius);
                 PropertyField(m_Quality);
+                PropertyField(m_SampleCount);
+                PropertyField(m_Resolution);
             }
 
             if (isVolumetricOn)

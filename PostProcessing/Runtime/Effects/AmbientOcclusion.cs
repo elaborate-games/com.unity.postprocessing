@@ -67,6 +67,34 @@ namespace UnityEngine.Rendering.PostProcessing
     public sealed class AmbientOcclusionQualityParameter : ParameterOverride<AmbientOcclusionQuality> {}
 
     /// <summary>
+    /// Resolution of the <see cref="AmbientOcclusionMode.ScalableAmbientObscurance"/> occlusion
+    /// estimate. The blur and composite passes always run at full resolution.
+    /// </summary>
+    public enum ScalableAOResolution
+    {
+        /// <summary>
+        /// The stock behaviour: half for Lowest, Low and Medium quality, full for High and Ultra.
+        /// </summary>
+        FromQuality,
+
+        /// <summary>
+        /// Full resolution.
+        /// </summary>
+        Full,
+
+        /// <summary>
+        /// Half width and half height (a quarter of the pixels).
+        /// </summary>
+        Half
+    }
+
+    /// <summary>
+    /// A volume parameter holding a <see cref="ScalableAOResolution"/> value.
+    /// </summary>
+    [Serializable]
+    public sealed class ScalableAOResolutionParameter : ParameterOverride<ScalableAOResolution> {}
+
+    /// <summary>
     /// This class holds settings for the Ambient Occlusion effect.
     /// </summary>
     [Serializable]
@@ -158,6 +186,19 @@ namespace UnityEngine.Rendering.PostProcessing
         /// </summary>
         [Tooltip("The number of sample points. This affects both quality and performance. For \"Lowest\", \"Low\", and \"Medium\", passes are downsampled. For \"High\" and \"Ultra\", they are not and therefore you should only \"High\" and \"Ultra\" on high-end hardware.")]
         public AmbientOcclusionQualityParameter quality = new AmbientOcclusionQualityParameter { value = AmbientOcclusionQuality.Medium };
+
+        /// <summary>
+        /// Samples per pixel of the occlusion estimate. 0 takes it from <see cref="quality"/>
+        /// (Lowest 4, Low 6, Medium 10, High 8, Ultra 12).
+        /// </summary>
+        [Range(0, 32), Tooltip("Samples per pixel of the occlusion estimate. 0 takes it from Quality (Lowest 4, Low 6, Medium 10, High 8, Ultra 12).")]
+        public IntParameter sampleCount = new IntParameter { value = 0 };
+
+        /// <summary>
+        /// Resolution of the occlusion estimate, independent of the sample count.
+        /// </summary>
+        [Tooltip("Resolution of the occlusion estimate. From Quality: half for Lowest, Low and Medium, full for High and Ultra. The blur and composite always run at full resolution.")]
+        public ScalableAOResolutionParameter resolution = new ScalableAOResolutionParameter { value = ScalableAOResolution.FromQuality };
 
         // SRPs can call this method without a context set (see HDRP).
         // We need a better way to handle this than checking for a null context, context should

@@ -77,12 +77,20 @@ namespace UnityEngine.Rendering.PostProcessing
             m_Settings.radius.value = Mathf.Max(m_Settings.radius.value, 1e-4f);
 
             // Material setup
-            // Always use a quater-res AO buffer unless High/Ultra quality is set.
-            bool downsampling = (int)m_Settings.quality.value < (int)AmbientOcclusionQuality.High;
+            // Resolution and sample count can be set separately; by default both come from the
+            // quality (quarter-res AO buffer unless High/Ultra).
+            int quality = (int)m_Settings.quality.value;
+            bool downsampling;
+            switch (m_Settings.resolution.value)
+            {
+                case ScalableAOResolution.Full: downsampling = false; break;
+                case ScalableAOResolution.Half: downsampling = true; break;
+                default: downsampling = quality < (int)AmbientOcclusionQuality.High; break;
+            }
             float px = m_Settings.intensity.value;
             float py = m_Settings.radius.value;
             float pz = downsampling ? 0.5f : 1f;
-            float pw = m_SampleCount[(int)m_Settings.quality.value];
+            float pw = m_Settings.sampleCount.value > 0 ? m_Settings.sampleCount.value : m_SampleCount[quality];
 
             var sheet = m_PropertySheet;
             sheet.ClearKeywords();

@@ -108,6 +108,18 @@ float SampleDepth(float2 uv)
     return d * _ProjectionParams.z + CheckBounds(uv, d);
 }
 
+// Civitates: at half resolution every occlusion pixel centre lies exactly on the corner between
+// four depth texels, so point-sampled depth reads whichever texel float rounding picks. That choice
+// flips in bands across the screen, the reconstructed position/normal shift with it, and the AO
+// shows stripes. Snap to one depth texel centre instead. At full resolution pixel centres already
+// are texel centres (u * size = k + 0.5), so this returns the same uv.
+float2 SnapToDepthTexel(float2 uv)
+{
+    if (_CameraDepthTexture_TexelSize.z < 1.0)
+        return uv; // texel size not bound: leave the coordinate alone
+    return (floor(uv * _CameraDepthTexture_TexelSize.zw - 0.25) + 0.5) * _CameraDepthTexture_TexelSize.xy;
+}
+
 // Linear eye depth without the out-of-bounds penalty (used for normal reconstruction)
 float SampleEyeDepthRaw(float2 uv)
 {
@@ -250,7 +262,7 @@ float3 PickSamplePoint(float2 uv, float index)
 //
 float4 FragAO(VaryingsDefault i) : SV_Target
 {
-    float2 uv = i.texcoord;
+    float2 uv = SnapToDepthTexel(i.texcoord);
 
     // Parameters used in coordinate conversion
     float3x3 proj = (float3x3)unity_CameraProjection;
